@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 
 dependencies = [
     "Pillow>=12.3,<13",
+    "matplotlib>=3.11,<4",
 ]
 
 [project.optional-dependencies]

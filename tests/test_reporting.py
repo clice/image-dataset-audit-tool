@@ -11,6 +11,7 @@ from image_dataset_audit.reporting import (
     render_terminal_report,
     write_csv_report,
     write_json_report,
+    write_pdf_report,
 )
 
 
@@ -572,3 +573,62 @@ def test_build_json_summary_handles_empty_dataset(
         "total": 0,
         "by_class": {},
     }
+    
+    
+def test_write_pdf_report_creates_pdf_file(
+    tmp_path: Path,
+) -> None:
+    dataset = tmp_path / "dataset"
+    cats = dataset / "cats"
+
+    cats.mkdir(parents=True)
+
+    Image.new(
+        "RGB",
+        (640, 480),
+    ).save(
+        cats / "cat.jpg",
+        format="JPEG",
+    )
+
+    audit = audit_dataset(dataset)
+
+    output_path = (
+        tmp_path
+        / "reports"
+        / "audit_report.pdf"
+    )
+
+    result = write_pdf_report(
+        audit,
+        output_path,
+    )
+
+    assert result == output_path.resolve()
+    assert result.exists()
+    assert result.stat().st_size > 0
+
+    with result.open("rb") as pdf_file:
+        assert pdf_file.read(4) == b"%PDF"
+        
+        
+def test_write_pdf_report_handles_empty_dataset(
+    tmp_path: Path,
+) -> None:
+    audit = audit_dataset(tmp_path)
+
+    output_path = (
+        tmp_path
+        / "audit_report.pdf"
+    )
+
+    result = write_pdf_report(
+        audit,
+        output_path,
+    )
+
+    assert result.exists()
+    assert result.stat().st_size > 0
+
+    with result.open("rb") as pdf_file:
+        assert pdf_file.read(4) == b"%PDF"
