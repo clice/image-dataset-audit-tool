@@ -4,8 +4,12 @@ import pytest
 
 from image_dataset_audit.analysis import (
     ClassDistribution,
+    InspectionSummary,
     analyze_class_distribution,
+    analyze_inspection_results,
 )
+
+from image_dataset_audit.inspection import ImageInspection
 
 
 def test_analyze_class_distribution_calculates_counts_and_percentages() -> None:
@@ -73,4 +77,115 @@ def test_analyze_class_distribution_handles_empty_input() -> None:
         empty_classes=(),
     )
     
+    
+def test_analyze_inspection_results_counts_valid_and_invalid_images() -> None:
+    inspections = {
+        "cats": [
+            ImageInspection(
+                path=Path("/dataset/cats/cat.jpg"),
+                extension=".jpg",
+                format="JPEG",
+                width=640,
+                height=480,
+                status="valid",
+            ),
+            ImageInspection(
+                path=Path("/dataset/cats/broken.jpg"),
+                extension=".jpg",
+                format=None,
+                width=None,
+                height=None,
+                status="invalid",
+                error="cannot identify image file",
+            ),
+        ],
+        "dogs": [
+            ImageInspection(
+                path=Path("/dataset/dogs/dog.png"),
+                extension=".png",
+                format="PNG",
+                width=320,
+                height=240,
+                status="valid",
+            ),
+        ],
+    }
+
+    result = analyze_inspection_results(inspections)
+
+    assert result.total == 3
+    assert result.valid == 2
+    assert result.invalid == 1    
+    
+    
+def test_analyze_inspection_results_counts_detected_formats() -> None:
+    inspections = {
+        "images": [
+            ImageInspection(
+                path=Path("/dataset/image_01.jpg"),
+                extension=".jpg",
+                format="JPEG",
+                width=640,
+                height=480,
+                status="valid",
+            ),
+            ImageInspection(
+                path=Path("/dataset/image_02.png"),
+                extension=".png",
+                format="PNG",
+                width=320,
+                height=240,
+                status="valid",
+            ),
+            ImageInspection(
+                path=Path("/dataset/misnamed.jpg"),
+                extension=".jpg",
+                format="PNG",
+                width=100,
+                height=50,
+                status="valid",
+            ),
+        ],
+    }
+
+    result = analyze_inspection_results(inspections)
+
+    assert result.format_counts == {
+        "JPEG": 1,
+        "PNG": 2,
+    }
+    
+    
+def test_analyze_inspection_results_excludes_invalid_images_from_formats() -> None:
+    inspections = {
+        "cats": [
+            ImageInspection(
+                path=Path("/dataset/cats/broken.jpg"),
+                extension=".jpg",
+                format=None,
+                width=None,
+                height=None,
+                status="invalid",
+                error="cannot identify image file",
+            ),
+        ],
+    }
+
+    result = analyze_inspection_results(inspections)
+
+    assert result.total == 1
+    assert result.valid == 0
+    assert result.invalid == 1
+    assert result.format_counts == {}
+    
+    
+def test_analyze_inspection_results_handles_empty_input() -> None:
+    result = analyze_inspection_results({})
+
+    assert result == InspectionSummary(
+        total=0,
+        valid=0,
+        invalid=0,
+        format_counts={},
+    )
     

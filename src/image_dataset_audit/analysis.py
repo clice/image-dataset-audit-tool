@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from image_dataset_audit.inspection import ImageInspection
+
 
 @dataclass(frozen=True)
 class ClassDistribution:
@@ -12,6 +14,16 @@ class ClassDistribution:
     counts: dict[str, int]
     percentages: dict[str, float]
     empty_classes: tuple[str, ...]
+    
+    
+@dataclass(frozen=True)
+class InspectionSummary:
+    """Summary statistics for inspected image candidates."""
+
+    total: int
+    valid: int
+    invalid: int
+    format_counts: dict[str, int]
     
     
 def analyze_class_distribution(
@@ -56,3 +68,45 @@ def analyze_class_distribution(
         percentages=percentages,
         empty_classes=empty_classes,
     )
+    
+    
+def analyze_inspection_results(
+    inspections: dict[str, list[ImageInspection]],
+) -> InspectionSummary:
+    """Summarize image inspection results.
+
+    Args:
+        inspections: Image inspection results grouped by class name.
+
+    Returns:
+        Total, valid and invalid image counts, plus detected
+        format counts for valid images.
+    """
+    total = 0
+    valid = 0
+    invalid = 0
+    format_counts: dict[str, int] = {}
+
+    for results in inspections.values():
+        for result in results:
+            total += 1
+
+            if result.status == "valid":
+                valid += 1
+
+                if result.format is not None:
+                    format_counts[result.format] = (
+                        format_counts.get(result.format, 0) + 1
+                    )
+            else:
+                invalid += 1
+
+    format_counts = dict(sorted(format_counts.items()))
+
+    return InspectionSummary(
+        total=total,
+        valid=valid,
+        invalid=invalid,
+        format_counts=format_counts,
+    )
+    
