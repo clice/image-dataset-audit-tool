@@ -1,7 +1,9 @@
 """Dataset discovery utilities."""
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
+
 
 SUPPORTED_IMAGE_EXTENSIONS = frozenset(
     {
@@ -14,6 +16,14 @@ SUPPORTED_IMAGE_EXTENSIONS = frozenset(
         ".webp",
     }
 )
+
+
+@dataclass(frozen=True)
+class DiscoveryCounts:
+    """Image candidate counts discovered in a dataset."""
+
+    total: int
+    by_class: dict[str, int]
 
 
 def validate_dataset_path(dataset_path: str | Path) -> Path:
@@ -108,4 +118,63 @@ def discover_image_candidates(
         )
 
     return candidates
+
+
+def count_image_candidates(
+    candidates: dict[str, list[Path]],
+) -> DiscoveryCounts:
+    """Count discovered image candidates globally and by class.
+
+    Args:
+        candidates: Image candidates grouped by class name.
+
+    Returns:
+        Total and per-class image candidate counts.
+    """
+    by_class = {
+        class_name: len(images)
+        for class_name, images in candidates.items()
+    }
+
+    total = sum(by_class.values())
+
+    return DiscoveryCounts(
+        total=total,
+        by_class=by_class,
+    )
+    
+    
+def discover_unsupported_files(
+    dataset_path: str | Path,
+) -> dict[str, list[Path]]:
+    """Discover unsupported files grouped by dataset class.
+
+    Args:
+        dataset_path: Path to the dataset root directory.
+
+    Returns:
+        A dictionary mapping each class name to files whose extensions
+        are not included in the supported image extension set.
+    """
+    classes = discover_classes(dataset_path)
+
+    unsupported: dict[str, list[Path]] = {}
+
+    for class_path in classes:
+        class_files = [
+            path
+            for path in class_path.rglob("*")
+            if path.is_file()
+            and path.suffix.casefold() not in SUPPORTED_IMAGE_EXTENSIONS
+        ]
+
+        unsupported[class_path.name] = sorted(
+            class_files,
+            key=lambda path: (
+                path.relative_to(class_path).as_posix().casefold(),
+                path.relative_to(class_path).as_posix(),
+            ),
+        )
+
+    return unsupported
     

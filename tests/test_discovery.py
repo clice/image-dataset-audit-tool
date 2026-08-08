@@ -3,8 +3,11 @@ from pathlib import Path
 import pytest
 
 from image_dataset_audit.discovery import (
+    DiscoveryCounts,
+    count_image_candidates,
     discover_classes,
     discover_image_candidates,
+    discover_unsupported_files,
     validate_dataset_path,
 )
 
@@ -191,3 +194,96 @@ def test_discover_image_candidates_preserves_empty_classes(
 
     assert result == {"birds": []}
         
+        
+        
+def test_count_image_candidates_returns_total_and_per_class() -> None:
+    candidates = {
+        "birds": [],
+        "cats": [
+            Path("/dataset/cats/cat_01.jpg"),
+            Path("/dataset/cats/cat_02.jpg"),
+            Path("/dataset/cats/cat_03.png"),
+        ],
+        "dogs": [
+            Path("/dataset/dogs/dog_01.jpg"),
+            Path("/dataset/dogs/dog_02.webp"),
+        ],
+    }
+
+    result = count_image_candidates(candidates)
+
+    assert result == DiscoveryCounts(
+        total=5,
+        by_class={
+            "birds": 0,
+            "cats": 3,
+            "dogs": 2,
+        },
+    )
+
+
+def test_count_image_candidates_handles_empty_dataset() -> None:
+    result = count_image_candidates({})
+
+    assert result == DiscoveryCounts(
+        total=0,
+        by_class={},
+    )
+
+
+def test_count_image_candidates_preserves_empty_classes() -> None:
+    candidates = {
+        "birds": [],
+        "cats": [Path("/dataset/cats/cat.jpg")],
+    }
+
+    result = count_image_candidates(candidates)
+
+    assert result.by_class == {
+        "birds": 0,
+        "cats": 1,
+    }
+    assert result.total == 1
+    
+    
+def test_discover_unsupported_files_groups_files_by_class(
+    tmp_path: Path,
+) -> None:
+    cats = tmp_path / "cats"
+    dogs = tmp_path / "dogs"
+
+    cats.mkdir()
+    dogs.mkdir()
+
+    (cats / "notes.txt").touch()
+    (dogs / "metadata.csv").touch()
+
+    result = discover_unsupported_files(tmp_path)
+
+    assert [path.name for path in result["cats"]] == ["notes.txt"]
+    assert [path.name for path in result["dogs"]] == ["metadata.csv"]
+
+
+def test_discover_unsupported_files_ignores_supported_images(
+    tmp_path: Path,
+) -> None:
+    cats = tmp_path / "cats"
+    cats.mkdir()
+
+    (cats / "cat.jpg").touch()
+    (cats / "notes.txt").touch()
+
+    result = discover_unsupported_files(tmp_path)
+
+    assert [path.name for path in result["cats"]] == ["notes.txt"]
+
+
+def test_discover_unsupported_files_ignores_root_files(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "cats").mkdir()
+    (tmp_path / "README.txt").touch()
+
+    result = discover_unsupported_files(tmp_path)
+
+    assert result == {"cats": []}
