@@ -1,6 +1,11 @@
 from pathlib import Path
 
-from image_dataset_audit.inspection import ImageInspection
+from PIL import Image
+
+from image_dataset_audit.inspection import (
+    ImageInspection,
+    inspect_image,
+)
 
 
 def test_image_inspection_stores_valid_image_metadata() -> None:
@@ -38,4 +43,68 @@ def test_image_inspection_supports_invalid_image_result() -> None:
     assert result.height is None
     assert result.status == "invalid"
     assert result.error == "cannot identify image file"
+    
+    
+def test_inspect_image_extracts_jpeg_metadata(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "image.jpg"
+
+    Image.new(
+        "RGB",
+        (640, 480),
+    ).save(
+        image_path,
+        format="JPEG",
+    )
+
+    result = inspect_image(image_path)
+
+    assert result.path == image_path.resolve()
+    assert result.extension == ".jpg"
+    assert result.format == "JPEG"
+    assert result.width == 640
+    assert result.height == 480
+    assert result.status == "valid"
+    assert result.error is None
+    
+    
+def test_inspect_image_extracts_png_metadata(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "image.PNG"
+
+    Image.new(
+        "RGB",
+        (320, 240),
+    ).save(
+        image_path,
+        format="PNG",
+    )
+
+    result = inspect_image(image_path)
+
+    assert result.extension == ".png"
+    assert result.format == "PNG"
+    assert result.width == 320
+    assert result.height == 240
+    
+    
+def test_inspect_image_detects_format_independently_from_extension(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "misnamed.jpg"
+
+    Image.new(
+        "RGB",
+        (100, 50),
+    ).save(
+        image_path,
+        format="PNG",
+    )
+
+    result = inspect_image(image_path)
+
+    assert result.extension == ".jpg"
+    assert result.format == "PNG"
     
