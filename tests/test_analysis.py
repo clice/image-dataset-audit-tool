@@ -5,8 +5,10 @@ import pytest
 from image_dataset_audit.analysis import (
     ClassDistribution,
     DimensionStatistics,
+    ImbalanceIndicator,
     InspectionSummary,
     analyze_class_distribution,
+    analyze_class_imbalance,
     analyze_dimensions,
     analyze_inspection_results,
 )
@@ -317,4 +319,102 @@ def test_analyze_dimensions_handles_empty_input() -> None:
     assert result.max_height is None
     assert result.mean_height is None
     assert result.median_height is None
+    
+    
+def test_analyze_class_imbalance_calculates_ratio() -> None:
+    distribution = ClassDistribution(
+        total=8,
+        counts={
+            "birds": 0,
+            "cats": 5,
+            "dogs": 3,
+        },
+        percentages={
+            "birds": 0.0,
+            "cats": 62.5,
+            "dogs": 37.5,
+        },
+        empty_classes=("birds",),
+    )
+
+    result = analyze_class_imbalance(distribution)
+
+    assert result.non_empty_class_count == 2
+    assert result.largest_class_count == 5
+    assert result.smallest_class_count == 3
+    assert result.ratio == pytest.approx(5 / 3)
+    
+    
+def test_analyze_class_imbalance_ignores_empty_classes() -> None:
+    distribution = ClassDistribution(
+        total=10,
+        counts={
+            "empty": 0,
+            "class_a": 5,
+            "class_b": 5,
+        },
+        percentages={
+            "empty": 0.0,
+            "class_a": 50.0,
+            "class_b": 50.0,
+        },
+        empty_classes=("empty",),
+    )
+
+    result = analyze_class_imbalance(distribution)
+
+    assert result.smallest_class_count == 5
+    assert result.largest_class_count == 5
+    assert result.ratio == 1.0
+    
+    
+def test_analyze_class_imbalance_requires_two_non_empty_classes() -> None:
+    distribution = ClassDistribution(
+        total=5,
+        counts={
+            "birds": 0,
+            "cats": 5,
+        },
+        percentages={
+            "birds": 0.0,
+            "cats": 100.0,
+        },
+        empty_classes=("birds",),
+    )
+
+    result = analyze_class_imbalance(distribution)
+
+    assert result == ImbalanceIndicator(
+        non_empty_class_count=1,
+        largest_class_count=5,
+        smallest_class_count=5,
+        ratio=None,
+    )
+    
+    
+def test_analyze_class_imbalance_handles_no_non_empty_classes() -> None:
+    distribution = ClassDistribution(
+        total=0,
+        counts={
+            "birds": 0,
+            "cats": 0,
+        },
+        percentages={
+            "birds": 0.0,
+            "cats": 0.0,
+        },
+        empty_classes=(
+            "birds",
+            "cats",
+        ),
+    )
+
+    result = analyze_class_imbalance(distribution)
+
+    assert result == ImbalanceIndicator(
+        non_empty_class_count=0,
+        largest_class_count=None,
+        smallest_class_count=None,
+        ratio=None,
+    )
     

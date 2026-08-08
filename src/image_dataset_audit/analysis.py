@@ -42,6 +42,16 @@ class DimensionStatistics:
     median_height: float | None
     
     
+@dataclass(frozen=True)
+class ImbalanceIndicator:
+    """Descriptive class imbalance indicator."""
+
+    non_empty_class_count: int
+    largest_class_count: int | None
+    smallest_class_count: int | None
+    ratio: float | None
+    
+    
 def analyze_class_distribution(
     candidates: dict[str, list[Path]],
 ) -> ClassDistribution:
@@ -175,5 +185,55 @@ def analyze_dimensions(
         max_height=max(heights),
         mean_height=mean(heights),
         median_height=median(heights),
+    )
+    
+    
+def analyze_class_imbalance(
+    distribution: ClassDistribution,
+) -> ImbalanceIndicator:
+    """Calculate a descriptive class imbalance ratio.
+
+    The ratio is defined as the largest class count divided by the
+    smallest non-empty class count. Empty classes are excluded from
+    the ratio calculation.
+
+    Args:
+        distribution: Previously calculated class distribution.
+
+    Returns:
+        Counts used in the calculation and the descriptive ratio.
+        The ratio is ``None`` when fewer than two non-empty classes
+        are available for comparison.
+    """
+    non_empty_counts = [
+        count
+        for count in distribution.counts.values()
+        if count > 0
+    ]
+
+    if len(non_empty_counts) < 2:
+        return ImbalanceIndicator(
+            non_empty_class_count=len(non_empty_counts),
+            largest_class_count=(
+                non_empty_counts[0]
+                if non_empty_counts
+                else None
+            ),
+            smallest_class_count=(
+                non_empty_counts[0]
+                if non_empty_counts
+                else None
+            ),
+            ratio=None,
+        )
+
+    largest = max(non_empty_counts)
+    smallest = min(non_empty_counts)
+
+    return ImbalanceIndicator(
+        non_empty_class_count=len(non_empty_counts),
+        largest_class_count=largest,
+        smallest_class_count=smallest,
+        ratio=largest / smallest,
     )
     
