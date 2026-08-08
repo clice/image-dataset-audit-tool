@@ -107,8 +107,8 @@ def test_render_terminal_report_handles_empty_dataset(
     assert "Detected formats\n  None" in report
     assert "Dimensions\n  N/A" in report
     assert "Class imbalance ratio\n  N/A" in report
-    
-    
+
+
 def test_write_csv_report_creates_expected_columns(
     tmp_path: Path,
 ) -> None:
@@ -153,8 +153,8 @@ def test_write_csv_report_creates_expected_columns(
             "status",
             "error",
         ]
-        
-        
+
+
 def test_write_csv_report_writes_valid_image_metadata(
     tmp_path: Path,
 ) -> None:
@@ -200,8 +200,8 @@ def test_write_csv_report_writes_valid_image_metadata(
             "error": "",
         }
     ]
-    
-    
+
+
 def test_write_csv_report_writes_invalid_image_metadata(
     tmp_path: Path,
 ) -> None:
@@ -243,9 +243,10 @@ def test_write_csv_report_writes_invalid_image_metadata(
     assert row["height"] == ""
 
     assert row["status"] == "invalid"
-    assert row["error"]
-    
-    
+    assert "dogs/broken.jpg" in row["error"]
+    assert str(dataset.resolve()) not in row["error"]
+
+
 def test_write_csv_report_preserves_nested_relative_path(
     tmp_path: Path,
 ) -> None:
@@ -284,8 +285,8 @@ def test_write_csv_report_preserves_nested_relative_path(
     )
 
     assert rows[0]["class"] == "cats"
-    
-    
+
+
 def test_write_csv_report_handles_empty_dataset(
     tmp_path: Path,
 ) -> None:

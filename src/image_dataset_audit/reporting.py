@@ -150,6 +150,25 @@ def render_terminal_report(audit: DatasetAudit) -> str:
     return "\n".join(lines)
 
 
+def _format_report_error(
+    error: str | None,
+    image_path: Path,
+    dataset_path: Path,
+) -> str | None:
+    """Replace absolute image paths in errors with dataset-relative paths."""
+    if error is None:
+        return None
+
+    relative_path = image_path.relative_to(
+        dataset_path
+    ).as_posix()
+
+    return error.replace(
+        str(image_path),
+        relative_path,
+    )
+
+
 def write_csv_report(
     audit: DatasetAudit,
     output_path: str | Path,
@@ -196,7 +215,11 @@ def write_csv_report(
                         "width": result.width,
                         "height": result.height,
                         "status": result.status,
-                        "error": result.error,
+                        "error": _format_report_error(
+                            result.error,
+                            result.path,
+                            audit.dataset_path,
+                        ),
                     }
                 )
 
