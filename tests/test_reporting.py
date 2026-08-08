@@ -315,8 +315,8 @@ def test_write_csv_report_handles_empty_dataset(
         )
 
     assert rows == []
-    
-    
+
+
 def test_build_json_summary_contains_dataset_statistics(
     tmp_path: Path,
 ) -> None:
@@ -370,8 +370,8 @@ def test_build_json_summary_contains_dataset_statistics(
         "JPEG": 1,
         "PNG": 1,
     }
-    
-    
+
+
 def test_build_json_summary_contains_distribution_and_imbalance(
     tmp_path: Path,
 ) -> None:
@@ -426,8 +426,8 @@ def test_build_json_summary_contains_distribution_and_imbalance(
         "smallest_class_count": 1,
         "ratio": 2.0,
     }
-    
-    
+
+
 def test_build_json_summary_contains_dimension_statistics(
     tmp_path: Path,
 ) -> None:
@@ -470,7 +470,7 @@ def test_build_json_summary_contains_dimension_statistics(
             "median": 150.0,
         },
     }
-    
+
 
 def test_build_json_summary_uses_relative_unsupported_paths(
     tmp_path: Path,
@@ -496,8 +496,8 @@ def test_build_json_summary_uses_relative_unsupported_paths(
     }
 
     assert str(dataset.resolve()) not in str(summary)
-    
-    
+
+
 def test_write_json_report_creates_valid_json(
     tmp_path: Path,
 ) -> None:
@@ -538,8 +538,8 @@ def test_write_json_report_creates_valid_json(
     assert data["dataset"]["name"] == "dataset"
     assert data["dataset"]["total_candidates"] == 1
     assert data["integrity"]["valid"] == 1
-    
-    
+
+
 def test_build_json_summary_handles_empty_dataset(
     tmp_path: Path,
 ) -> None:
@@ -572,4 +572,3 @@ def test_build_json_summary_handles_empty_dataset(
         "total": 0,
         "by_class": {},
     }
-    

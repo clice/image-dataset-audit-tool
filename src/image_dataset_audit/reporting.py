@@ -311,8 +311,8 @@ def build_json_summary(
             "by_class": unsupported_by_class,
         },
     }
-    
-    
+
+
 def write_json_report(
     audit: DatasetAudit,
     output_path: str | Path,
