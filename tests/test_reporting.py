@@ -45,8 +45,8 @@ def test_render_terminal_report_contains_dataset_summary(
     assert "Valid: 2" in report
     assert "Invalid: 1" in report
     assert "Unsupported files: 1" in report
-    
-    
+
+
 def test_render_terminal_report_contains_analysis_results(
     tmp_path: Path,
 ) -> None:
@@ -86,8 +86,8 @@ def test_render_terminal_report_contains_analysis_results(
 
     assert "Class imbalance ratio" in report
     assert "  1.00" in report
-    
-    
+
+
 def test_render_terminal_report_handles_empty_dataset(
     tmp_path: Path,
 ) -> None:
