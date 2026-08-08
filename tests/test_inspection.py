@@ -108,3 +108,40 @@ def test_inspect_image_detects_format_independently_from_extension(
     assert result.extension == ".jpg"
     assert result.format == "PNG"
     
+    
+def test_inspect_image_returns_invalid_result_for_unidentified_image(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "broken.jpg"
+    image_path.touch()
+
+    result = inspect_image(image_path)
+
+    assert result.path == image_path.resolve()
+    assert result.extension == ".jpg"
+    assert result.format is None
+    assert result.width is None
+    assert result.height is None
+    assert result.status == "invalid"
+    assert result.error is not None
+    assert "cannot identify image file" in result.error
+    
+    
+def test_inspect_image_returns_invalid_result_for_corrupted_image(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "corrupted.png"
+
+    image_path.write_bytes(
+        b"\x89PNG\r\n\x1a\ninvalid-image-data"
+    )
+
+    result = inspect_image(image_path)
+
+    assert result.extension == ".png"
+    assert result.format is None
+    assert result.width is None
+    assert result.height is None
+    assert result.status == "invalid"
+    assert result.error is not None
+    
