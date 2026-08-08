@@ -67,8 +67,8 @@ def test_audit_dataset_runs_complete_pipeline(
         path.name
         for path in result.unsupported_files["dogs"]
     ] == ["notes.txt"]
-    
-    
+
+
 def test_audit_dataset_handles_empty_dataset(
     tmp_path: Path,
 ) -> None:
@@ -82,4 +82,3 @@ def test_audit_dataset_handles_empty_dataset(
     assert result.candidates == {}
     assert result.inspections == {}
     assert result.unsupported_files == {}
-    
