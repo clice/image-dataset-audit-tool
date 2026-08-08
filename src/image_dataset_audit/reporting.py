@@ -1,6 +1,21 @@
 """Dataset audit reporting utilities."""
 
+import csv
+from pathlib import Path
+
 from image_dataset_audit.audit import DatasetAudit
+
+
+CSV_FIELDS = (
+    "path",
+    "class",
+    "extension",
+    "format",
+    "width",
+    "height",
+    "status",
+    "error",
+)
 
 
 def render_terminal_report(audit: DatasetAudit) -> str:
@@ -133,3 +148,56 @@ def render_terminal_report(audit: DatasetAudit) -> str:
         )
 
     return "\n".join(lines)
+
+
+def write_csv_report(
+    audit: DatasetAudit,
+    output_path: str | Path,
+) -> Path:
+    """Write detailed image inspection results to CSV.
+
+    Args:
+        audit: Complete dataset audit result.
+        output_path: Destination path for the CSV report.
+
+    Returns:
+        Absolute path to the generated CSV file.
+    """
+    path = Path(output_path).expanduser().resolve()
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    with path.open(
+        "w",
+        encoding="utf-8",
+        newline="",
+    ) as csv_file:
+        writer = csv.DictWriter(
+            csv_file,
+            fieldnames=CSV_FIELDS,
+        )
+
+        writer.writeheader()
+
+        for class_name, results in audit.inspections.items():
+            for result in results:
+                relative_path = result.path.relative_to(
+                    audit.dataset_path
+                )
+
+                writer.writerow(
+                    {
+                        "path": relative_path.as_posix(),
+                        "class": class_name,
+                        "extension": result.extension,
+                        "format": result.format,
+                        "width": result.width,
+                        "height": result.height,
+                        "status": result.status,
+                        "error": result.error,
+                    }
+                )
+
+    return path
