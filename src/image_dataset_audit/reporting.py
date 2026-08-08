@@ -1,6 +1,7 @@
 """Dataset audit reporting utilities."""
 
 import csv
+import json
 from pathlib import Path
 
 from image_dataset_audit.audit import DatasetAudit
@@ -222,5 +223,129 @@ def write_csv_report(
                         ),
                     }
                 )
+
+    return path
+
+
+def build_json_summary(
+    audit: DatasetAudit,
+) -> dict[str, object]:
+    """Build a structured JSON-compatible audit summary.
+
+    Args:
+        audit: Complete dataset audit result.
+
+    Returns:
+        JSON-compatible dictionary containing dataset audit statistics.
+    """
+    class_distribution = {
+        class_name: {
+            "count": count,
+            "percentage": audit.distribution.percentages[class_name],
+        }
+        for class_name, count in audit.distribution.counts.items()
+    }
+
+    unsupported_by_class = {
+        class_name: [
+            file_path.relative_to(
+                audit.dataset_path
+            ).as_posix()
+            for file_path in files
+        ]
+        for class_name, files in audit.unsupported_files.items()
+    }
+
+    unsupported_total = sum(
+        len(files)
+        for files in audit.unsupported_files.values()
+    )
+
+    dimensions = audit.dimensions
+    imbalance = audit.imbalance
+
+    return {
+        "dataset": {
+            "name": audit.dataset_path.name,
+            "class_count": len(audit.distribution.counts),
+            "total_candidates": audit.distribution.total,
+        },
+        "integrity": {
+            "valid": audit.inspection_summary.valid,
+            "invalid": audit.inspection_summary.invalid,
+        },
+        "class_distribution": class_distribution,
+        "empty_classes": list(
+            audit.distribution.empty_classes
+        ),
+        "formats": audit.inspection_summary.format_counts,
+        "dimensions": {
+            "image_count": dimensions.image_count,
+            "width": {
+                "min": dimensions.min_width,
+                "max": dimensions.max_width,
+                "mean": dimensions.mean_width,
+                "median": dimensions.median_width,
+            },
+            "height": {
+                "min": dimensions.min_height,
+                "max": dimensions.max_height,
+                "mean": dimensions.mean_height,
+                "median": dimensions.median_height,
+            },
+        },
+        "imbalance": {
+            "non_empty_class_count": (
+                imbalance.non_empty_class_count
+            ),
+            "largest_class_count": (
+                imbalance.largest_class_count
+            ),
+            "smallest_class_count": (
+                imbalance.smallest_class_count
+            ),
+            "ratio": imbalance.ratio,
+        },
+        "unsupported_files": {
+            "total": unsupported_total,
+            "by_class": unsupported_by_class,
+        },
+    }
+    
+    
+def write_json_report(
+    audit: DatasetAudit,
+    output_path: str | Path,
+) -> Path:
+    """Write the structured dataset audit summary to JSON.
+
+    Args:
+        audit: Complete dataset audit result.
+        output_path: Destination path for the JSON report.
+
+    Returns:
+        Absolute path to the generated JSON file.
+    """
+    path = Path(output_path).expanduser().resolve()
+
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    summary = build_json_summary(audit)
+
+    with path.open(
+        "w",
+        encoding="utf-8",
+    ) as json_file:
+        json.dump(
+            summary,
+            json_file,
+            indent=2,
+            ensure_ascii=False,
+        )
+
+        json_file.write("\n")
 
     return path
