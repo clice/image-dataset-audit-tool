@@ -353,14 +353,56 @@ def write_json_report(
     return path
 
 
-def _add_pdf_text_page(
-    pdf: PdfPages,
-    title: str,
-    lines: list[str],
+PDF_PAGE_SIZE = (
+    8.27,
+    11.69,
+)
+
+
+def _style_pdf_table(
+    table: object,
 ) -> None:
-    """Add a text-based page to a PDF report."""
+    """Apply consistent styling to a PDF table."""
+    for (row_index, _), cell in table.get_celld().items():
+        cell.set_linewidth(0.5)
+        cell.PAD = 0.08
+
+        if row_index == 0:
+            cell.get_text().set_fontweight(
+                "bold"
+            )
+
+
+def _add_pdf_table(
+    axis: object,
+    headers: list[str],
+    rows: list[list[str]],
+    bbox: list[float],
+    font_size: float = 10.0,
+) -> None:
+    """Add a styled table to a PDF page."""
+    table = axis.table(
+        cellText=rows,
+        colLabels=headers,
+        cellLoc="left",
+        colLoc="left",
+        bbox=bbox,
+    )
+
+    table.auto_set_font_size(False)
+    table.set_fontsize(font_size)
+
+    _style_pdf_table(table)
+
+
+def _add_pdf_overview_page(
+    pdf: PdfPages,
+    audit: DatasetAudit,
+    unsupported_total: int,
+) -> None:
+    """Add the dataset overview page."""
     figure = Figure(
-        figsize=(8.27, 11.69),
+        figsize=PDF_PAGE_SIZE,
     )
 
     axis = figure.subplots()
@@ -369,75 +411,569 @@ def _add_pdf_text_page(
     axis.text(
         0.05,
         0.95,
-        title,
+        "Image Dataset Audit",
         fontsize=20,
         fontweight="bold",
         va="top",
         transform=axis.transAxes,
     )
 
-    y_position = 0.88
-
-    for line in lines:
-        axis.text(
-            0.05,
-            y_position,
-            line,
-            fontsize=11,
-            va="top",
-            transform=axis.transAxes,
-        )
-
-        y_position -= 0.045
-
-    pdf.savefig(
-        figure,
-        bbox_inches="tight",
+    axis.text(
+        0.05,
+        0.90,
+        audit.dataset_path.name,
+        fontsize=12,
+        va="top",
+        transform=axis.transAxes,
     )
 
+    axis.text(
+        0.05,
+        0.83,
+        "Dataset Overview",
+        fontsize=14,
+        fontweight="bold",
+        va="top",
+        transform=axis.transAxes,
+    )
 
-def _add_pdf_bar_chart(
+    empty_classes = (
+        ", ".join(
+            audit.distribution.empty_classes
+        )
+        if audit.distribution.empty_classes
+        else "None"
+    )
+
+    overview_rows = [
+        [
+            "Classes",
+            str(
+                len(
+                    audit.distribution.counts
+                )
+            ),
+        ],
+        [
+            "Image candidates",
+            str(
+                audit.distribution.total
+            ),
+        ],
+        [
+            "Valid images",
+            str(
+                audit.inspection_summary.valid
+            ),
+        ],
+        [
+            "Invalid images",
+            str(
+                audit.inspection_summary.invalid
+            ),
+        ],
+        [
+            "Unsupported files",
+            str(unsupported_total),
+        ],
+        [
+            "Empty classes",
+            empty_classes,
+        ],
+    ]
+
+    _add_pdf_table(
+        axis,
+        [
+            "Metric",
+            "Value",
+        ],
+        overview_rows,
+        [
+            0.05,
+            0.48,
+            0.90,
+            0.30,
+        ],
+        font_size=10.5,
+    )
+
+    axis.text(
+        0.05,
+        0.41,
+        "Quality Observations",
+        fontsize=14,
+        fontweight="bold",
+        va="top",
+        transform=axis.transAxes,
+    )
+
+    observations = []
+
+    if audit.distribution.empty_classes:
+        observations.append(
+            "Empty classes detected: "
+            + ", ".join(
+                audit.distribution.empty_classes
+            )
+        )
+    else:
+        observations.append(
+            "No empty classes detected."
+        )
+
+    observations.append(
+        "Invalid image candidates: "
+        f"{audit.inspection_summary.invalid}"
+    )
+
+    observations.append(
+        "Unsupported files: "
+        f"{unsupported_total}"
+    )
+
+    observation_text = "\n".join(
+        f"- {observation}"
+        for observation in observations
+    )
+
+    axis.text(
+        0.07,
+        0.36,
+        observation_text,
+        fontsize=10.5,
+        va="top",
+        linespacing=1.6,
+        transform=axis.transAxes,
+    )
+
+    axis.text(
+        0.05,
+        0.08,
+        (
+            "The audit is read-only and does not "
+            "modify the source dataset."
+        ),
+        fontsize=9,
+        va="bottom",
+        transform=axis.transAxes,
+    )
+
+    pdf.savefig(figure)
+
+
+def _add_pdf_distribution_page(
     pdf: PdfPages,
-    title: str,
-    labels: list[str],
-    values: list[int],
-    ylabel: str,
+    audit: DatasetAudit,
 ) -> None:
-    """Add a bar chart page to a PDF report."""
+    """Add class distribution analysis to the PDF."""
     figure = Figure(
-        figsize=(8.27, 11.69),
+        figsize=PDF_PAGE_SIZE,
+    )
+
+    figure.text(
+        0.07,
+        0.94,
+        "Class Distribution",
+        fontsize=20,
+        fontweight="bold",
+        va="top",
+    )
+
+    class_names = list(
+        audit.distribution.counts.keys()
+    )
+
+    class_counts = list(
+        audit.distribution.counts.values()
+    )
+
+    if class_names:
+        chart_axis = figure.add_axes(
+            [
+                0.16,
+                0.61,
+                0.75,
+                0.22,
+            ]
+        )
+
+        chart_axis.barh(
+            class_names,
+            class_counts,
+        )
+
+        chart_axis.invert_yaxis()
+
+        chart_axis.set_xlabel(
+            "Image candidates"
+        )
+
+        chart_axis.grid(
+            axis="x",
+            alpha=0.2,
+        )
+
+        chart_axis.spines[
+            "top"
+        ].set_visible(False)
+
+        chart_axis.spines[
+            "right"
+        ].set_visible(False)
+
+        maximum = max(
+            class_counts,
+            default=0,
+        )
+
+        chart_axis.set_xlim(
+            0,
+            max(
+                1,
+                maximum * 1.25,
+            ),
+        )
+
+        label_offset = max(
+            0.04,
+            maximum * 0.025,
+        )
+
+        for index, count in enumerate(
+            class_counts
+        ):
+            chart_axis.text(
+                count + label_offset,
+                index,
+                str(count),
+                va="center",
+                fontsize=9,
+            )
+    else:
+        figure.text(
+            0.07,
+            0.72,
+            "No classes were detected.",
+            fontsize=11,
+        )
+
+    table_axis = figure.add_axes(
+        [
+            0.08,
+            0.29,
+            0.84,
+            0.23,
+        ]
+    )
+
+    table_axis.axis("off")
+
+    if class_names:
+        distribution_rows = []
+
+        for class_name, count in (
+            audit.distribution.counts.items()
+        ):
+            percentage = (
+                audit.distribution
+                .percentages[class_name]
+            )
+
+            status = (
+                "Empty"
+                if count == 0
+                else "Non-empty"
+            )
+
+            distribution_rows.append(
+                [
+                    class_name,
+                    str(count),
+                    f"{percentage:.2f}%",
+                    status,
+                ]
+            )
+    else:
+        distribution_rows = [
+            [
+                "None",
+                "0",
+                "0.00%",
+                "N/A",
+            ]
+        ]
+
+    _add_pdf_table(
+        table_axis,
+        [
+            "Class",
+            "Candidates",
+            "Share",
+            "Status",
+        ],
+        distribution_rows,
+        [
+            0.00,
+            0.00,
+            1.00,
+            1.00,
+        ],
+        font_size=9.5,
+    )
+
+    imbalance = audit.imbalance
+
+    figure.text(
+        0.08,
+        0.22,
+        "Class Imbalance",
+        fontsize=13,
+        fontweight="bold",
+        va="top",
+    )
+
+    if imbalance.ratio is None:
+        imbalance_text = (
+            "Ratio: N/A\n"
+            "At least two non-empty classes "
+            "are required."
+        )
+    else:
+        imbalance_text = (
+            f"Ratio: {imbalance.ratio:.2f}\n"
+            "Largest class: "
+            f"{imbalance.largest_class_count} "
+            "images\n"
+            "Smallest non-empty class: "
+            f"{imbalance.smallest_class_count} "
+            "images\n"
+            "Descriptive indicator only; "
+            "no universal imbalance threshold "
+            "is applied."
+        )
+
+    figure.text(
+        0.08,
+        0.18,
+        imbalance_text,
+        fontsize=9.5,
+        va="top",
+        linespacing=1.5,
+    )
+
+    pdf.savefig(figure)
+
+
+def _add_pdf_quality_page(
+    pdf: PdfPages,
+    audit: DatasetAudit,
+) -> None:
+    """Add integrity, formats and dimensions tables."""
+    figure = Figure(
+        figsize=PDF_PAGE_SIZE,
     )
 
     axis = figure.subplots()
+    axis.axis("off")
 
-    axis.bar(
-        labels,
-        values,
+    axis.text(
+        0.05,
+        0.95,
+        "Image Properties & Quality",
+        fontsize=20,
+        fontweight="bold",
+        va="top",
+        transform=axis.transAxes,
     )
 
-    axis.set_title(
-        title,
-        fontsize=18,
-        pad=20,
+    axis.text(
+        0.05,
+        0.87,
+        "Image Integrity",
+        fontsize=14,
+        fontweight="bold",
+        va="top",
+        transform=axis.transAxes,
     )
 
-    axis.set_ylabel(ylabel)
+    integrity_rows = [
+        [
+            "Valid",
+            str(
+                audit.inspection_summary.valid
+            ),
+        ],
+        [
+            "Invalid",
+            str(
+                audit.inspection_summary.invalid
+            ),
+        ],
+    ]
 
-    axis.grid(
-        axis="y",
-        alpha=0.2,
+    _add_pdf_table(
+        axis,
+        [
+            "Status",
+            "Count",
+        ],
+        integrity_rows,
+        [
+            0.05,
+            0.69,
+            0.42,
+            0.14,
+        ],
+        font_size=10,
     )
 
-    for index, value in enumerate(values):
-        axis.text(
-            index,
-            value,
-            str(value),
-            ha="center",
-            va="bottom",
-        )
+    axis.text(
+        0.53,
+        0.87,
+        "Detected Formats",
+        fontsize=14,
+        fontweight="bold",
+        va="top",
+        transform=axis.transAxes,
+    )
 
-    figure.tight_layout()
+    format_counts = (
+        audit.inspection_summary.format_counts
+    )
+
+    if format_counts:
+        format_rows = [
+            [
+                image_format,
+                str(count),
+            ]
+            for image_format, count
+            in format_counts.items()
+        ]
+    else:
+        format_rows = [
+            [
+                "None",
+                "0",
+            ]
+        ]
+
+    _add_pdf_table(
+        axis,
+        [
+            "Format",
+            "Valid images",
+        ],
+        format_rows,
+        [
+            0.53,
+            0.61,
+            0.42,
+            0.22,
+        ],
+        font_size=10,
+    )
+
+    axis.text(
+        0.05,
+        0.53,
+        "Dimension Statistics",
+        fontsize=14,
+        fontweight="bold",
+        va="top",
+        transform=axis.transAxes,
+    )
+
+    dimensions = audit.dimensions
+
+    if dimensions.image_count > 0:
+        dimension_rows = [
+            [
+                "Minimum",
+                str(dimensions.min_width),
+                str(dimensions.min_height),
+            ],
+            [
+                "Maximum",
+                str(dimensions.max_width),
+                str(dimensions.max_height),
+            ],
+            [
+                "Mean",
+                f"{dimensions.mean_width:.2f}",
+                f"{dimensions.mean_height:.2f}",
+            ],
+            [
+                "Median",
+                f"{dimensions.median_width:.2f}",
+                f"{dimensions.median_height:.2f}",
+            ],
+        ]
+    else:
+        dimension_rows = [
+            [
+                "Minimum",
+                "N/A",
+                "N/A",
+            ],
+            [
+                "Maximum",
+                "N/A",
+                "N/A",
+            ],
+            [
+                "Mean",
+                "N/A",
+                "N/A",
+            ],
+            [
+                "Median",
+                "N/A",
+                "N/A",
+            ],
+        ]
+
+    _add_pdf_table(
+        axis,
+        [
+            "Statistic",
+            "Width",
+            "Height",
+        ],
+        dimension_rows,
+        [
+            0.05,
+            0.27,
+            0.90,
+            0.21,
+        ],
+        font_size=10,
+    )
+
+    axis.text(
+        0.05,
+        0.21,
+        (
+            "Images with valid dimensions: "
+            f"{dimensions.image_count}"
+        ),
+        fontsize=9.5,
+        va="top",
+        transform=axis.transAxes,
+    )
+
+    axis.text(
+        0.05,
+        0.16,
+        (
+            "Dimension statistics are calculated "
+            "from valid images only."
+        ),
+        fontsize=9,
+        va="top",
+        transform=axis.transAxes,
+    )
 
     pdf.savefig(figure)
 
@@ -446,7 +982,7 @@ def write_pdf_report(
     audit: DatasetAudit,
     output_path: str | Path,
 ) -> Path:
-    """Write a visual multi-page dataset audit report to PDF.
+    """Write a compact multi-page dataset audit report to PDF.
 
     Args:
         audit: Complete dataset audit result.
@@ -479,227 +1015,20 @@ def write_pdf_report(
         path,
         metadata=metadata,
     ) as pdf:
-        overview_lines = [
-            f"Dataset: {audit.dataset_path.name}",
-            "",
-            (
-                "Classes: "
-                f"{len(audit.distribution.counts)}"
-            ),
-            (
-                "Image candidates: "
-                f"{audit.distribution.total}"
-            ),
-            "",
-            (
-                "Valid images: "
-                f"{audit.inspection_summary.valid}"
-            ),
-            (
-                "Invalid images: "
-                f"{audit.inspection_summary.invalid}"
-            ),
-            (
-                "Unsupported files: "
-                f"{unsupported_total}"
-            ),
-            "",
-            (
-                "Empty classes: "
-                + (
-                    ", ".join(
-                        audit.distribution.empty_classes
-                    )
-                    if audit.distribution.empty_classes
-                    else "None"
-                )
-            ),
-        ]
-
-        _add_pdf_text_page(
+        _add_pdf_overview_page(
             pdf,
-            "Image Dataset Audit",
-            overview_lines,
+            audit,
+            unsupported_total,
         )
 
-        class_labels = list(
-            audit.distribution.counts.keys()
-        )
-
-        class_values = list(
-            audit.distribution.counts.values()
-        )
-
-        if class_labels:
-            _add_pdf_bar_chart(
-                pdf,
-                "Class Distribution",
-                class_labels,
-                class_values,
-                "Image candidates",
-            )
-        else:
-            _add_pdf_text_page(
-                pdf,
-                "Class Distribution",
-                [
-                    "No classes were detected.",
-                ],
-            )
-
-        _add_pdf_bar_chart(
+        _add_pdf_distribution_page(
             pdf,
-            "Image Integrity",
-            [
-                "Valid",
-                "Invalid",
-            ],
-            [
-                audit.inspection_summary.valid,
-                audit.inspection_summary.invalid,
-            ],
-            "Images",
+            audit,
         )
 
-        format_counts = (
-            audit.inspection_summary.format_counts
-        )
-
-        if format_counts:
-            _add_pdf_bar_chart(
-                pdf,
-                "Detected Image Formats",
-                list(format_counts.keys()),
-                list(format_counts.values()),
-                "Valid images",
-            )
-        else:
-            _add_pdf_text_page(
-                pdf,
-                "Detected Image Formats",
-                [
-                    "No valid image formats were detected.",
-                ],
-            )
-
-        dimensions = audit.dimensions
-        imbalance = audit.imbalance
-
-        if dimensions.image_count > 0:
-            dimension_lines = [
-                (
-                    "Images with dimensions: "
-                    f"{dimensions.image_count}"
-                ),
-                "",
-                "Width",
-                (
-                    "  Minimum: "
-                    f"{dimensions.min_width}"
-                ),
-                (
-                    "  Maximum: "
-                    f"{dimensions.max_width}"
-                ),
-                (
-                    "  Mean: "
-                    f"{dimensions.mean_width:.2f}"
-                ),
-                (
-                    "  Median: "
-                    f"{dimensions.median_width:.2f}"
-                ),
-                "",
-                "Height",
-                (
-                    "  Minimum: "
-                    f"{dimensions.min_height}"
-                ),
-                (
-                    "  Maximum: "
-                    f"{dimensions.max_height}"
-                ),
-                (
-                    "  Mean: "
-                    f"{dimensions.mean_height:.2f}"
-                ),
-                (
-                    "  Median: "
-                    f"{dimensions.median_height:.2f}"
-                ),
-            ]
-        else:
-            dimension_lines = [
-                "No valid image dimensions are available.",
-            ]
-
-        dimension_lines.extend(
-            [
-                "",
-                "Class imbalance",
-            ]
-        )
-
-        if imbalance.ratio is None:
-            dimension_lines.append(
-                "  Ratio: N/A"
-            )
-        else:
-            dimension_lines.extend(
-                [
-                    (
-                        "  Largest class count: "
-                        f"{imbalance.largest_class_count}"
-                    ),
-                    (
-                        "  Smallest non-empty class count: "
-                        f"{imbalance.smallest_class_count}"
-                    ),
-                    (
-                        "  Ratio: "
-                        f"{imbalance.ratio:.2f}"
-                    ),
-                    (
-                        "  This ratio is descriptive only; "
-                        "no universal imbalance threshold "
-                        "is applied."
-                    ),
-                ]
-            )
-
-        dimension_lines.extend(
-            [
-                "",
-                "Quality observations",
-            ]
-        )
-
-        if audit.distribution.empty_classes:
-            dimension_lines.append(
-                "  Empty classes detected: "
-                + ", ".join(
-                    audit.distribution.empty_classes
-                )
-            )
-        else:
-            dimension_lines.append(
-                "  No empty classes detected."
-            )
-
-        dimension_lines.append(
-            "  Invalid image candidates: "
-            f"{audit.inspection_summary.invalid}"
-        )
-
-        dimension_lines.append(
-            "  Unsupported files: "
-            f"{unsupported_total}"
-        )
-
-        _add_pdf_text_page(
+        _add_pdf_quality_page(
             pdf,
-            "Dimensions and Quality Summary",
-            dimension_lines,
+            audit,
         )
 
     return path
