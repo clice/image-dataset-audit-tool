@@ -48,8 +48,8 @@ def test_analyze_class_distribution_calculates_counts_and_percentages() -> None:
     assert result.percentages["dogs"] == pytest.approx(37.5)
 
     assert result.empty_classes == ("birds",)
-    
-    
+
+
 def test_analyze_class_distribution_handles_all_empty_classes() -> None:
     candidates: dict[str, list[Path]] = {
         "birds": [],
@@ -69,8 +69,8 @@ def test_analyze_class_distribution_handles_all_empty_classes() -> None:
         "birds",
         "cats",
     )
-    
-    
+
+
 def test_analyze_class_distribution_handles_empty_input() -> None:
     result = analyze_class_distribution({})
 
@@ -80,8 +80,8 @@ def test_analyze_class_distribution_handles_empty_input() -> None:
         percentages={},
         empty_classes=(),
     )
-    
-    
+
+
 def test_analyze_inspection_results_counts_valid_and_invalid_images() -> None:
     inspections = {
         "cats": [
@@ -119,9 +119,9 @@ def test_analyze_inspection_results_counts_valid_and_invalid_images() -> None:
 
     assert result.total == 3
     assert result.valid == 2
-    assert result.invalid == 1    
-    
-    
+    assert result.invalid == 1
+
+
 def test_analyze_inspection_results_counts_detected_formats() -> None:
     inspections = {
         "images": [
@@ -158,8 +158,8 @@ def test_analyze_inspection_results_counts_detected_formats() -> None:
         "JPEG": 1,
         "PNG": 2,
     }
-    
-    
+
+
 def test_analyze_inspection_results_excludes_invalid_images_from_formats() -> None:
     inspections = {
         "cats": [
@@ -181,8 +181,8 @@ def test_analyze_inspection_results_excludes_invalid_images_from_formats() -> No
     assert result.valid == 0
     assert result.invalid == 1
     assert result.format_counts == {}
-    
-    
+
+
 def test_analyze_inspection_results_handles_empty_input() -> None:
     result = analyze_inspection_results({})
 
@@ -192,8 +192,8 @@ def test_analyze_inspection_results_handles_empty_input() -> None:
         invalid=0,
         format_counts={},
     )
-    
-    
+
+
 def test_analyze_dimensions_calculates_descriptive_statistics() -> None:
     inspections = {
         "images": [
@@ -237,8 +237,8 @@ def test_analyze_dimensions_calculates_descriptive_statistics() -> None:
     assert result.max_height == 480
     assert result.mean_height == pytest.approx(256.666667)
     assert result.median_height == 240
-    
-    
+
+
 def test_analyze_dimensions_excludes_invalid_images() -> None:
     inspections = {
         "cats": [
@@ -275,8 +275,8 @@ def test_analyze_dimensions_excludes_invalid_images() -> None:
     assert result.max_height == 100
     assert result.mean_height == 100
     assert result.median_height == 100
-    
-    
+
+
 def test_analyze_dimensions_handles_no_valid_images() -> None:
     inspections = {
         "cats": [
@@ -305,8 +305,8 @@ def test_analyze_dimensions_handles_no_valid_images() -> None:
         mean_height=None,
         median_height=None,
     )
-    
-    
+
+
 def test_analyze_dimensions_handles_empty_input() -> None:
     result = analyze_dimensions({})
 
@@ -319,8 +319,8 @@ def test_analyze_dimensions_handles_empty_input() -> None:
     assert result.max_height is None
     assert result.mean_height is None
     assert result.median_height is None
-    
-    
+
+
 def test_analyze_class_imbalance_calculates_ratio() -> None:
     distribution = ClassDistribution(
         total=8,
@@ -343,8 +343,8 @@ def test_analyze_class_imbalance_calculates_ratio() -> None:
     assert result.largest_class_count == 5
     assert result.smallest_class_count == 3
     assert result.ratio == pytest.approx(5 / 3)
-    
-    
+
+
 def test_analyze_class_imbalance_ignores_empty_classes() -> None:
     distribution = ClassDistribution(
         total=10,
@@ -366,8 +366,8 @@ def test_analyze_class_imbalance_ignores_empty_classes() -> None:
     assert result.smallest_class_count == 5
     assert result.largest_class_count == 5
     assert result.ratio == 1.0
-    
-    
+
+
 def test_analyze_class_imbalance_requires_two_non_empty_classes() -> None:
     distribution = ClassDistribution(
         total=5,
@@ -390,8 +390,8 @@ def test_analyze_class_imbalance_requires_two_non_empty_classes() -> None:
         smallest_class_count=5,
         ratio=None,
     )
-    
-    
+
+
 def test_analyze_class_imbalance_handles_no_non_empty_classes() -> None:
     distribution = ClassDistribution(
         total=0,
@@ -417,4 +417,3 @@ def test_analyze_class_imbalance_handles_no_non_empty_classes() -> None:
         smallest_class_count=None,
         ratio=None,
     )
-    

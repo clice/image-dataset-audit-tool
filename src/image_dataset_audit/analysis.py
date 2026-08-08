@@ -15,8 +15,8 @@ class ClassDistribution:
     counts: dict[str, int]
     percentages: dict[str, float]
     empty_classes: tuple[str, ...]
-    
-    
+
+
 @dataclass(frozen=True)
 class InspectionSummary:
     """Summary statistics for inspected image candidates."""
@@ -25,8 +25,8 @@ class InspectionSummary:
     valid: int
     invalid: int
     format_counts: dict[str, int]
-    
-    
+
+
 @dataclass(frozen=True)
 class DimensionStatistics:
     """Descriptive statistics for valid image dimensions."""
@@ -40,8 +40,8 @@ class DimensionStatistics:
     max_height: int | None
     mean_height: float | None
     median_height: float | None
-    
-    
+
+
 @dataclass(frozen=True)
 class ImbalanceIndicator:
     """Descriptive class imbalance indicator."""
@@ -50,8 +50,8 @@ class ImbalanceIndicator:
     largest_class_count: int | None
     smallest_class_count: int | None
     ratio: float | None
-    
-    
+
+
 def analyze_class_distribution(
     candidates: dict[str, list[Path]],
 ) -> ClassDistribution:
@@ -94,8 +94,8 @@ def analyze_class_distribution(
         percentages=percentages,
         empty_classes=empty_classes,
     )
-    
-    
+
+
 def analyze_inspection_results(
     inspections: dict[str, list[ImageInspection]],
 ) -> InspectionSummary:
@@ -135,8 +135,8 @@ def analyze_inspection_results(
         invalid=invalid,
         format_counts=format_counts,
     )
-    
-    
+
+
 def analyze_dimensions(
     inspections: dict[str, list[ImageInspection]],
 ) -> DimensionStatistics:
@@ -186,8 +186,8 @@ def analyze_dimensions(
         mean_height=mean(heights),
         median_height=median(heights),
     )
-    
-    
+
+
 def analyze_class_imbalance(
     distribution: ClassDistribution,
 ) -> ImbalanceIndicator:
@@ -236,4 +236,3 @@ def analyze_class_imbalance(
         smallest_class_count=smallest,
         ratio=largest / smallest,
     )
-    
