@@ -64,3 +64,23 @@ def inspect_image(image_path: str | Path) -> ImageInspection:
         status="valid",
     )
     
+    
+def inspect_image_candidates(
+    candidates: dict[str, list[Path]],
+) -> dict[str, list[ImageInspection]]:
+    """Inspect discovered image candidates grouped by class.
+
+    Args:
+        candidates: Image candidate paths grouped by class name.
+
+    Returns:
+        Image inspection results grouped by class name.
+    """
+    return {
+        class_name: [
+            inspect_image(image_path)
+            for image_path in image_paths
+        ]
+        for class_name, image_paths in candidates.items()
+    }
+    
