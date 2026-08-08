@@ -38,3 +38,27 @@ def validate_dataset_path(dataset_path: str | Path) -> Path:
         )
 
     return path.resolve()
+
+
+def discover_classes(dataset_path: str | Path) -> list[Path]:
+    """Discover first-level class directories in a dataset.
+
+    Args:
+        dataset_path: Path to the dataset root directory.
+
+    Returns:
+        A deterministically ordered list of class directories.
+    """
+    root = validate_dataset_path(dataset_path)
+
+    classes = [
+        entry
+        for entry in root.iterdir()
+        if entry.is_dir()
+    ]
+
+    return sorted(
+        classes,
+        key=lambda path: (path.name.casefold(), path.name),
+    )
+    
