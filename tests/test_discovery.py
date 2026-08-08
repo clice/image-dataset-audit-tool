@@ -4,6 +4,7 @@ import pytest
 
 from image_dataset_audit.discovery import (
     discover_classes,
+    discover_image_candidates,
     validate_dataset_path,
 )
 
@@ -103,4 +104,90 @@ def test_discover_classes_returns_empty_list_when_no_classes_exist(
     result = discover_classes(tmp_path)
 
     assert result == []
+    
+    
+def test_discover_image_candidates_groups_images_by_class(
+    tmp_path: Path,
+) -> None:
+    cats = tmp_path / "cats"
+    dogs = tmp_path / "dogs"
+
+    cats.mkdir()
+    dogs.mkdir()
+
+    (cats / "cat.jpg").touch()
+    (dogs / "dog.png").touch()
+
+    result = discover_image_candidates(tmp_path)
+
+    assert list(result) == ["cats", "dogs"]
+
+    assert [path.name for path in result["cats"]] == ["cat.jpg"]
+    assert [path.name for path in result["dogs"]] == ["dog.png"]
+
+
+def test_discover_image_candidates_is_case_insensitive(
+    tmp_path: Path,
+) -> None:
+    cats = tmp_path / "cats"
+    cats.mkdir()
+
+    (cats / "cat.JPG").touch()
+    (cats / "second.PNG").touch()
+
+    result = discover_image_candidates(tmp_path)
+
+    assert [path.name for path in result["cats"]] == [
+        "cat.JPG",
+        "second.PNG",
+    ]
+
+
+def test_discover_image_candidates_ignores_unsupported_files(
+    tmp_path: Path,
+) -> None:
+    cats = tmp_path / "cats"
+    cats.mkdir()
+
+    (cats / "cat.jpg").touch()
+    (cats / "notes.txt").touch()
+    (cats / "metadata.csv").touch()
+
+    result = discover_image_candidates(tmp_path)
+
+    assert [path.name for path in result["cats"]] == ["cat.jpg"]
+
+
+def test_discover_image_candidates_scans_class_recursively(
+    tmp_path: Path,
+) -> None:
+    cats = tmp_path / "cats"
+    nested = cats / "persian"
+
+    nested.mkdir(parents=True)
+
+    (cats / "cat_01.jpg").touch()
+    (nested / "cat_02.jpg").touch()
+
+    result = discover_image_candidates(tmp_path)
+
+    relative_paths = [
+        path.relative_to(cats).as_posix()
+        for path in result["cats"]
+    ]
+
+    assert relative_paths == [
+        "cat_01.jpg",
+        "persian/cat_02.jpg",
+    ]
+
+
+def test_discover_image_candidates_preserves_empty_classes(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "birds").mkdir()
+
+    result = discover_image_candidates(tmp_path)
+
+    assert result == {"birds": []}
         
