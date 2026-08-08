@@ -394,8 +394,8 @@ def _add_pdf_text_page(
         figure,
         bbox_inches="tight",
     )
-    
-    
+
+
 def _add_pdf_bar_chart(
     pdf: PdfPages,
     title: str,
@@ -440,8 +440,8 @@ def _add_pdf_bar_chart(
     figure.tight_layout()
 
     pdf.savefig(figure)
-    
-    
+
+
 def write_pdf_report(
     audit: DatasetAudit,
     output_path: str | Path,

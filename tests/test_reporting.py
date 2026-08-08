@@ -573,8 +573,8 @@ def test_build_json_summary_handles_empty_dataset(
         "total": 0,
         "by_class": {},
     }
-    
-    
+
+
 def test_write_pdf_report_creates_pdf_file(
     tmp_path: Path,
 ) -> None:
@@ -610,8 +610,8 @@ def test_write_pdf_report_creates_pdf_file(
 
     with result.open("rb") as pdf_file:
         assert pdf_file.read(4) == b"%PDF"
-        
-        
+
+
 def test_write_pdf_report_handles_empty_dataset(
     tmp_path: Path,
 ) -> None:
